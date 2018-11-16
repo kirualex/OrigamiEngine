@@ -59,7 +59,7 @@
     free(callbackBuffer);
     free(writeBuf);
     [_convertedData release];
-    _inputUnit = nil;
+    self.inputUnit = nil;
     [super dealloc];
 }
 
@@ -117,7 +117,9 @@
 
 - (void)reinitWithNewInput:(ORGMInputUnit *)inputUnit withDataFlush:(BOOL)flush {
     if (flush) {
-        [self flushBuffer];
+        dispatch_sync([ORGMQueues lock_queue], ^{
+            self.convertedData = [NSMutableData data];
+        });
     }
     self.inputUnit = inputUnit;
     _inputFormat = inputUnit.format;
@@ -137,12 +139,6 @@
 
 - (BOOL)isReadyForBuffering {
     return (_convertedData.length <= 0.5*BUFFER_SIZE && !_inputUnit.isProcessing);
-}
-
-- (void)flushBuffer {
-    dispatch_sync([ORGMQueues lock_queue], ^{
-        self.convertedData = [NSMutableData data];
-    });
 }
 
 #pragma mark - private

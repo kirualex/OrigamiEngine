@@ -96,7 +96,6 @@
         ORGMOutputUnit *output = [[outputUnitClass alloc] initWithConverter:_converter];
         output.outputFormat = _outputFormat;
         self.output = output;
-        [_output setVolume:_volume];
         [output release];
 
         if (![_converter setupWithOutputUnit:_output]) {
@@ -136,7 +135,7 @@
 
 - (void)stop {
     dispatch_async([ORGMQueues processing_queue], ^{
-        [_input removeObserver:self forKeyPath:@"endOfInput"];
+//        [_input removeObserver:self forKeyPath:@"endOfInput"];
         self.output = nil;
         self.input = nil;
         self.converter = nil;
@@ -156,14 +155,9 @@
     return [_input metadata];
 }
 
-- (void)seekToTime:(double)time withDataFlush:(BOOL)flush {
-    [_output seek:time];
-    [_input seek:time withDataFlush:flush];
-    if (flush) [_converter flushBuffer];
-}
-
 - (void)seekToTime:(double)time {
-    [self seekToTime:time withDataFlush:NO];
+    [_output seek:time];
+    [_input seek:time];
 }
 
 - (void)setNextUrl:(NSURL *)url withDataFlush:(BOOL)flush {
@@ -196,15 +190,8 @@
             [_delegate engine:self didChangeState:_currentState];
         });
     } else if ([keyPath isEqualToString:@"endOfInput"]) {
-        NSURL *nextUrl = [_delegate engineExpectsNextUrl:self];
-        if (!nextUrl) {
-            [self setCurrentState:ORGMEngineStateStopped];
-            return;
-        }
-
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self setNextUrl:nextUrl withDataFlush:NO];
-        });
+        [_delegate engineDidFinish:self];
+        [_input removeObserver:self forKeyPath:keyPath];
     }
 }
 
